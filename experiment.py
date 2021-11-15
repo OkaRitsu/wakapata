@@ -1,3 +1,5 @@
+import csv
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -82,8 +84,17 @@ class Perceptron:
             batch_size: バッチサイズ．１のときはオンライン学習，len(x)のときはバッチ学習
         """
 
+        # 記録用のcsvファイル用意
+        filename = f'./results/lr-{lr}_boader-{boader}_batchsize-{batch_size}.csv'
+        with open(filename, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['epoch', 'step', 'w0', 'w1', 'loss'])
+
         # 収束しなかった場合ここで指定したエポックで重み修正をやめる
         max_epoch = 1000
+
+        # ロスの変化を求めるため
+        tmp_loss = 9999999
 
         for epoch in range(max_epoch):
             for step in range(0, len(x), batch_size):
@@ -101,14 +112,20 @@ class Perceptron:
                 self.w0_list.append(self.params['w0'])
                 self.w1_list.append(self.params['w1'])
 
-                # 評価関数の変化がしきい値を下回ったらやめる
-                if len(self.losses) > 1:
-                    diff_loss = abs(self.losses[-1] - self.losses[-2])
-                    if diff_loss < boader:
-                        # print(self.params)
-                        return
+                with open(filename, 'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        epoch, step, self.params['w0'], self.params['w1'], loss])
 
-                # print(epoch, step, self.params)
+            # 評価関数の変化がしきい値を下回ったらやめる
+            diff_loss = abs(tmp_loss - loss)
+            tmp_loss = loss
+            print(f'{epoch+1}epoch', diff_loss)
+            if diff_loss < boader:
+                # print(self.params)
+                return
+
+            # print(f'{epoch}epoch {step}steps', self.params)
 
 
 def wakapata_experiment(x, b):
@@ -127,7 +144,7 @@ def wakapata_experiment(x, b):
     # 学習率
     lr = 0.1
     # 評価関数が収束すると判断するためのしきい値（わかパタでは0.01）
-    boader = 0.001
+    boader = 0.01
     # bach_size=1でオンライン学習，batch_size = len(x)でバッチ学習
     batch_sizes = [len(x), 1]
     labels = ['batch', 'online']
@@ -173,7 +190,7 @@ def wakapata_experiment(x, b):
     return fig
 
 
-def experiment(x, b, w0=11.0, w1=5.0, lr=0.1, batch_size=1, boader=0.001):
+def experiment(x, b, w0=11.0, w1=5.0, lr=0.1, batch_size=1, boader=0.01):
     """
     わかパタとは違う実験を行って比較する．
     引数で指定しないと，わかパタと同じ条件（オンライン学習）になる．
@@ -187,8 +204,6 @@ def experiment(x, b, w0=11.0, w1=5.0, lr=0.1, batch_size=1, boader=0.001):
         batch_size: バッチサイズ，１のときはオンライン学習，6のときはバッチ学習
         boader: lossが収束したと判断するためのしきち値
     """
-
-
     # わかパタの実験結果を取得して上に重ねる
     fig = wakapata_experiment(x, b)
     ax1 = fig.add_subplot(1, 2, 1)
@@ -216,7 +231,7 @@ def main():
     # 教師データ
     b = np.array([1, 1, -1, 1, -1, -1])
 
-    experiment(x, b, boader=0.001)
+    experiment(x, b, boader=0.01)
 
 
 if __name__ == '__main__':
